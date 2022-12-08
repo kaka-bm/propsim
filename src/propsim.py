@@ -18,7 +18,7 @@ class AircraftEngines:
             gamma: Ratio of specific heats
             cp: Specific heat at constant pressure
             hpr: Low heating value of fuel
-            Tt4:
+            Tt4: Total temperature leaving the burner
             pi_c: Compressor total pressure ratio
 
         Returns: A tuple containing the following outputs
@@ -60,8 +60,8 @@ class AircraftEngines:
             M0: Mach number
             gamma: Ratio of specific heats
             cp: Specific heat at constant pressure
-            hpr:
-            Tt4: Total temperature leaving the 
+            hpr: Low heating value of fuel
+            Tt4: Total temperature leaving the burner
             pi_c: Compressor total pressure ratio
             
         Returns: A tuple containing the following outputs
