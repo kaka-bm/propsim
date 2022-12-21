@@ -10,49 +10,85 @@ class AircraftEngines:
         self.P0 = self.atm.pressure
         self.a0 = self.atm.speed_of_sound
 
-    def ideal_turbojet(self, M0, gamma, cp, hpr, Tt4, pi_c):
+    def ideal_turbojet(self, M0, gamma, cp, hpr, Tt4, pi_c, batch_size=1, min_pi_c=0.001, max_pi_c=40):
         """
         Description: This method calculates the on design parameters of an ideal turbojet engine.
 
         Arguments:
-            M0: Mach number                             [  -  ]
-            gamma: Ratio of specific heats              [kJ/kgK]
-            cp: Specific heat at constant pressure      [ J/K ]
-            hpr: Low heating value of fuel              [kJ/kg]
-            Tt4: Total temperature leaving the burner   [  K  ]
-            pi_c: Compressor total pressure ratio       [  -  ]
+            M0: Mach number                                     [  -  ]
+            gamma: Ratio of specific heats                      [kJ/kgK]
+            cp: Specific heat at constant pressure              [ J/K ]
+            hpr: Low heating value of fuel                      [kJ/kg]
+            Tt4: Total temperature leaving the burner           [  K  ]
+            pi_c: Compressor total pressure ratio               [  -  ]
+            batch_size: Number of points to iterate pi_c        [  -  ]
+            min_pi_c: Min value for pi_c (only used in batch)   [  -  ]
+            max_pi_c: Max value for pi_c (only used in batch)   [  -  ]
 
-        Returns: A tuple containing the following outputs
-            F_m0: Specific Thrust           [0]
-            f: Fuel Air ratio               [1]
-            S: Specific fuel consumption    [2]
-            eta_T: Thermal efficiency       [3]
-            eta_P: Propulsive efficiency    [4]
-            eta_Total: Total efficiency     [5]
-        """    
+        Returns: A dictionary containing the list of calculated outputs for each batch.
+            pi_c: Compressor total pressure ratio   
+            F_m0: Specific Thrust                   
+            f: Fuel Air ratio                       
+            S: Specific fuel consumption            
+            eta_T: Thermal efficiency               
+            eta_P: Propulsive efficiency            
+            eta_Total: Total efficiency             
+        """
 
-        R = (gamma - 1)/gamma * cp
-        V0 = self.a0 * M0 
+        output = {
+            'pi_c': [],
+            'F_m0': [],
+            'f': [],
+            'S': [],
+            'eta_T': [],
+            'eta_P': [],
+            'eta_Total': []
+        }
 
-        tau_r = 1 + (gamma - 1)/2 * M0**2
+        pi_c_increase = 1
 
-        tau_c = pi_c**((gamma - 1)/gamma)
+        if batch_size <= 0:
+            return output
+        elif batch_size == 1:
+            max_pi_c = pi_c  
+        else:
+            pi_c = min_pi_c
+            pi_c_increase = (max_pi_c - min_pi_c)/batch_size
 
-        tau_lambda = Tt4/self.T0
-        f = cp * self.T0/hpr * (tau_lambda - tau_r * tau_c)
+        while pi_c <= max_pi_c:
+        
+            R = (gamma - 1)/gamma * cp
+            V0 = self.a0 * M0 
 
-        tau_t = 1 - tau_r/tau_lambda * (tau_c - 1)
-        V9_a0 = (2/(gamma - 1 )* tau_lambda/(tau_r * tau_c) * (tau_r * tau_c * tau_t - 1))**(1/2)
+            tau_r = 1 + (gamma - 1)/2 * M0**2
 
-        F_m0 = self.a0 * (V9_a0 - M0)
-        S = f/F_m0 
-        eta_T = 1 - 1/(tau_r * tau_c)
-        eta_P = 2 * M0/(V9_a0 + M0)
-        eta_Total = eta_P * eta_T
+            tau_c = pi_c**((gamma - 1)/gamma)
 
-        return (F_m0, f, S, eta_T, eta_P, eta_Total)
+            tau_lambda = Tt4/self.T0
+            f = cp * self.T0/hpr * (tau_lambda - tau_r * tau_c)
 
-    def real_turbojet(self, M0, gamma_c, gamma_t, cp_c, cp_t, hpr, Tt4 , pi_c, pi_d_max, pi_b, pi_n,e_c,e_t,eta_b,eta_m,P0_P9):
+            tau_t = 1 - tau_r/tau_lambda * (tau_c - 1)
+            V9_a0 = (2/(gamma - 1 )* tau_lambda/(tau_r * tau_c) * (tau_r * tau_c * tau_t - 1))**(1/2)
+
+            F_m0 = self.a0 * (V9_a0 - M0)
+            S = f/F_m0 
+            eta_T = 1 - 1/(tau_r * tau_c)
+            eta_P = 2 * M0/(V9_a0 + M0)
+            eta_Total = eta_P * eta_T
+
+            output['pi_c'].append(pi_c)
+            output['F_m0'].append(F_m0)
+            output['f'].append(f)
+            output['S'].append(S)
+            output['eta_T'].append(eta_T)
+            output['eta_P'].append(eta_P)
+            output['eta_Total'].append(eta_Total)
+
+            pi_c += pi_c_increase
+        
+        return output
+
+    def real_turbojet(self, M0, gamma_c, gamma_t, cp_c, cp_t, hpr, Tt4 , pi_c, pi_d_max, pi_b, pi_n, e_c, e_t, eta_b, eta_m, P0_P9, batch_size=1, min_pi_c=0.001, max_pi_c=40):
         """
         Description: This method calculates the on design parameters of an non ideal turbojet engine.
 
@@ -73,117 +109,269 @@ class AircraftEngines:
             eta_b: Combustor efficiency                                 [  -  ]
             eta_m: Mechanical efficiency                                [  -  ]
             P0_P9: Ratio between Po/P9                                  [  -  ]
+            batch_size: Number of points to iterate pi_c                [  -  ]
+            min_pi_c: Min value for pi_c (only used in batch)           [  -  ]
+            max_pi_c: Max value for pi_c (only used in batch)           [  -  ]
 
-
-        Returns: A tuple containing the following outputs
-            F_m0: Specific Thrust           [0]
-            f: Fuel Air ratio               [1]
-            S: Specific fuel consumption    [2]
-            eta_T: Thermal efficiency       [3]
-            eta_P: Propulsive efficiency    [4]
-            eta_Total: Total efficiency     [5]
+        Returns: A dictionary containing the list of calculated outputs for each batch.
+            pi_c: Compressor total pressure ratio   
+            F_m0: Specific Thrust                   
+            f: Fuel Air ratio                       
+            S: Specific fuel consumption            
+            eta_T: Thermal efficiency               
+            eta_P: Propulsive efficiency            
+            eta_Total: Total efficiency   
         """  
 
-        # O primeiro passo para a solução numerica do motor Turbojet não ideal é o cálculo das constantes gerais dos gases proposta por Clapeyron, para o compressor (Rc) e para a turbina (Rt) em J/(kg.K) a partir dos dados de entrada.
-        R_c    = ( (gamma_c - 1)/gamma_c )*(cp_c)
-        R_t    = ( (gamma_t - 1)/gamma_t )*(cp_t)
+        output = {
+            'pi_c': [],
+            'F_m0': [],
+            'f': [],
+            'S': [],
+            'eta_T': [],
+            'eta_P': [],
+            'eta_Total': []
+        }
 
-        # Local sound speed (a0) for flight conditions and aircraft speed (V0)
-        a0    = math.sqrt(gamma_c*R_c*self.T0)
-        V0    = a0*M0
+        pi_c_increase = 1
 
-        # Free flow parameters
-        tal_r    = 1 + ( (gamma_c - 1)/2 )*(M0**2)
-        pi_r     = tal_r**(gamma_c/(gamma_c - 1))
+        if batch_size <= 0:
+            return output
+        elif batch_size == 1:
+            max_pi_c = pi_c  
+        else:
+            pi_c = min_pi_c
+            pi_c_increase = (max_pi_c - min_pi_c)/batch_size
 
-        if (M0 <= 1):
-            eta_r  = 1
-        elif (M0 > 1 and M0 <= 5):
-            eta_r  = 1 - 0.075*((M0 - 1)**(1.35))
-        elif (M0 > 5):
-            eta_r  = 800/(M0**4 + 935)
+        while pi_c <= max_pi_c:
 
-        # Diffuser
-        pi_d   = pi_d_max*eta_r
+            # Gas constants
+            R_c    = ((gamma_c - 1)/gamma_c ) * (cp_c)
+            R_t    = ((gamma_t - 1)/gamma_t ) * (cp_t)
 
-        # Compressor
-        tal_c    = (pi_c)**((gamma_c - 1)/(gamma_c*e_c))
-        eta_c    = (pi_c**((gamma_c - 1)/gamma_c) - 1)/(tal_c - 1)
+            # Free stream
+            a0    = math.sqrt(gamma_c*R_c*self.T0)
+            V0    = a0 * M0
 
-        # Burner
-        tal_lambda    = cp_t*Tt4/(cp_c*self.T0)
-        f             = (tal_lambda-tal_r*tal_c)/( (hpr*eta_b/(cp_c*self.T0)) - tal_lambda)
+            # Free flow parameters
+            tal_r    = 1 + ((gamma_c - 1)/2 ) * (M0**2)
+            pi_r     = tal_r**(gamma_c/(gamma_c - 1))
 
-        # Turbine
-        tal_t  = 1 - (1/(eta_m*(1+f)))*(tal_r/tal_lambda)*(tal_c-1) 
-        pi_t   = tal_t**(gamma_t/((gamma_t-1)*e_t))
-        eta_t  = (1 - tal_t)/(1 - tal_t**(1/e_t))
+            if (M0 <= 1):
+                eta_r  = 1
+            elif (M0 > 1 and M0 <= 5):
+                eta_r  = 1 - 0.075*((M0 - 1)**(1.35))
+            elif (M0 > 5):
+                eta_r  = 800/(M0**4 + 935)
 
-        # Parameters related to the output of the core after the turbine
-        Pt9_P9 = (P0_P9)*pi_r*pi_d*pi_c*pi_b*pi_t*pi_n
-        M9     = (2/(gamma_t - 1)*(Pt9_P9**((gamma_t - 1)/gamma_t) - 1))**(1/2)
-        T9_T0  = (tal_lambda*tal_t)/( ((Pt9_P9)**((gamma_t-1)/gamma_t)))*(cp_c/cp_t)   
-        V9_a0  = M9*( math.sqrt( gamma_t*R_t*(T9_T0)/(gamma_c*R_c) ) )
+            # Diffuser
+            pi_d   = pi_d_max*eta_r
 
-        # Results
-        F_m0      = a0*((1+f)*V9_a0 - M0 + (1+f)*R_t*T9_T0/(R_c*V9_a0)*(1-P0_P9)/gamma_c)
-        S         = f/F_m0
-        eta_T   = ((a0**2)*( (1+f)*V9_a0**2 - M0**2 )/(2*f*(hpr)))
-        eta_P  = ( 2*V0*F_m0/( (a0**2)*( (1+f)*V9_a0**2 - M0**2 ) ) )
-        eta_Total = eta_T*eta_P
+            # Compressor
+            tal_c    = (pi_c)**((gamma_c - 1)/(gamma_c*e_c))
+            eta_c    = (pi_c**((gamma_c - 1)/gamma_c) - 1)/(tal_c - 1)
 
-        return (F_m0, f, S, eta_T, eta_P, eta_Total)
+            # Burner
+            tal_lambda    = cp_t*Tt4/(cp_c*self.T0)
+            f             = (tal_lambda-tal_r*tal_c)/( (hpr*eta_b/(cp_c*self.T0)) - tal_lambda)
+
+            # Turbine
+            tal_t  = 1 - (1/(eta_m*(1+f)))*(tal_r/tal_lambda)*(tal_c-1) 
+            pi_t   = tal_t**(gamma_t/((gamma_t-1)*e_t))
+            eta_t  = (1 - tal_t)/(1 - tal_t**(1/e_t))
+
+            # Auxiliar
+            Pt9_P9 = (P0_P9)*pi_r*pi_d*pi_c*pi_b*pi_t*pi_n
+            M9     = (2/(gamma_t - 1)*(Pt9_P9**((gamma_t - 1)/gamma_t) - 1))**(1/2)
+            T9_T0  = (tal_lambda*tal_t)/( ((Pt9_P9)**((gamma_t-1)/gamma_t)))*(cp_c/cp_t)   
+            V9_a0  = M9*( math.sqrt( gamma_t*R_t*(T9_T0)/(gamma_c*R_c) ) )
+
+            # Results
+            F_m0      = a0*((1+f)*V9_a0 - M0 + (1+f)*R_t*T9_T0/(R_c*V9_a0)*(1-P0_P9)/gamma_c)
+            S         = f/F_m0
+            eta_T     = ((a0**2)*( (1+f)*V9_a0**2 - M0**2 )/(2*f*(hpr)))
+            eta_P     = ( 2*V0*F_m0/( (a0**2)*( (1+f)*V9_a0**2 - M0**2 ) ) )
+            eta_Total = eta_T*eta_P
+
+            output['pi_c'].append(pi_c)
+            output['F_m0'].append(F_m0)
+            output['f'].append(f)
+            output['S'].append(S)
+            output['eta_T'].append(eta_T)
+            output['eta_P'].append(eta_P)
+            output['eta_Total'].append(eta_Total)
+
+            pi_c += pi_c_increase
+
+        return output
+
+    def real_turbojet_off_design(self,
+        M0,
+        Tt4,
+        P0_P9,
+        # Constantes
+        gamma_c,
+        cp_c,
+        gamma_t,
+        cp_t,
+        hpr,
+        pi_d_max,
+        pi_b,
+        pi_t,
+        pi_n,
+        tau_t,
+        eta_c,
+        eta_b,
+        eta_m,
+
+        # Condições de referência
+        M0_R,
+        T0_R,
+        P0_R,
+        tau_r_R,
+        pi_r_R,
+        Tt4_R,
+        pi_d_R,
+        pi_c_R,
+        tau_c_R,
+        Pt9_P9_R,
+
+        #  Inputs extras do Rolls-Royce Nene
+        m0_R = 50 # kg/s (?)
+        ):
+        
+        T0 = self.T0
+        P0 = self.P0
+
+        Tt2_R = T0_R*tau_r_R
 
 
-    def ideal_turbofan(self, M0, gamma, cp, hpr, Tt4, pi_c, pi_f, alpha):
+        #  Equations
+        R_c = (gamma_c - 1)/gamma_c*cp_c # J/(kg.K)
+        R_t = (gamma_t - 1)/gamma_t*cp_t # J/(kg.K)
+        a0 = (gamma_c*R_c*T0)**(1/2) # m/s
+        V0 = a0*M0
+        tau_r = 1 + (gamma_c - 1)/2*M0**2
+        pi_r = tau_r**(gamma_c/(gamma_c - 1))
+        if M0 <= 1:
+            eta_r = 1
+        else:
+            eta_r = 1 - 0.075*(M0 - 1)**1.35
+
+        pi_d = pi_d_max*eta_r
+        Tt2 = T0*tau_r
+        tau_c = 1 + (tau_c_R - 1)*Tt4/Tt2/(Tt4_R/Tt2_R)
+        pi_c = (1 + eta_c*(tau_c - 1))**(gamma_c/(gamma_c - 1))
+        tau_lambda = cp_t*Tt4/(cp_c*T0)
+        f = (tau_lambda - tau_r*tau_c)/(hpr*eta_b/(cp_c*T0) - tau_lambda) # kgFuel/kgAir
+        m0 = m0_R*P0*pi_r*pi_d*pi_c/(P0_R*pi_r_R*pi_d_R*pi_c_R)*(Tt4_R/Tt4)**(1/2) # kg/s
+        Pt9_P9 = P0_P9*pi_r*pi_d*pi_c*pi_b*pi_t*pi_n
+        M9 = (2/(gamma_t - 1)*(Pt9_P9**((gamma_t - 1)/gamma_t) - 1))**(1/2)
+        T9_T0 = tau_lambda*tau_t/(Pt9_P9**((gamma_t - 1)/gamma_t))*cp_c/cp_t
+        V9_a0 = M9*(gamma_t*R_t/(gamma_c*R_c)*T9_T0)**(1/2)
+        F_m0 = a0*((1 + f)*V9_a0 - M0 + (1 + f)*R_t*T9_T0/(R_c*V9_a0)*(1 - P0_P9)/gamma_c) # N/(kg/s)
+        F = F_m0*m0 # N
+        S = f/F_m0 # (kgFuel/s)/N
+        eta_T = a0**2*((1 + f)*V9_a0**2 - M0**2)/(2*f*hpr)
+        eta_P = 2*V0*F_m0/(a0**2*((1 + f)*V9_a0**2 - M0**2))
+        eta_Total = eta_P*eta_T
+        N_NR = (T0*tau_r/(T0_R*tau_r_R)*(pi_c**((gamma_c - 1)/gamma_c) - 1)/(pi_c_R**((gamma_c - 1)/gamma_c) - 1))**(1/2)
+        A9_A9R = (Pt9_P9/Pt9_P9_R)**((gamma_t + 1)/(2*gamma_t))*((Pt9_P9_R**((gamma_t - 1)/gamma_t) - 1)/(Pt9_P9**((gamma_t - 1)/gamma_t) - 1))**(1/2)
+        mc2_mc2_R = pi_c/pi_c_R*((Tt4_R/Tt2_R)/(Tt4/Tt2))**(1/2) # vazão mássica corrigida no compressor
+
+        #  Outputs extras
+        V9 = V9_a0*a0 # m/s
+        AF = 1/f  # kgAir/kgFuel
+        Pt4 = P0*pi_r*pi_d*pi_c*pi_b # Pa
+        Pt9 = P0*pi_r*pi_d*pi_c*pi_b*pi_t # Pa
+        T9 = T0*T9_T0 # K
+        
+        
+
+    def ideal_turbofan(self, M0, gamma, cp, hpr, Tt4, pi_c, pi_f, alpha, batch_size=1, min_pi_c=0.001, max_pi_c=40):
         """
         Description: This method calculates the on design parameters of an ideal turbofan engine.
 
         Arguments:
-            M0: Mach number                             [  -  ]
-            gamma: Ratio of specific heats              [kJ/kgK]
-            cp: Specific heat at constant pressure      [ J/K ]
-            hpr: Low heating value of fuel              [kJ/kg]
-            Tt4: Total temperature leaving the burner   [  K  ]   
-            pi_c: Compressor total pressure ratio       [  -  ]
-            
-        Returns: A tuple containing the following outputs
-            F_m0: Specific Thrust           [0]
-            f: Fuel Air ratio               [1]
-            S: Specific fuel consumption    [2]
-            eta_T: Thermal efficiency       [3]
-            eta_P: Propulsive efficiency    [4]
-            eta_Total: Total efficiency     [5]
-            FR: Thrust ratio                [6]
+            M0: Mach number                                             [  -  ]
+            gamma: Ratio of specific heats                              [kJ/kgK]
+            cp: Specific heat at constant pressure                      [ J/K ]
+            hpr: Low heating value of fuel                              [kJ/kg]
+            Tt4: Total temperature leaving the burner                   [  K  ]   
+            pi_c: Compressor total pressure ratio                       [  -  ]
+            batch_size: Number of points to iterate pi_c                [  -  ]
+            min_pi_c: Min value for pi_c (only used in batch)           [  -  ]
+            max_pi_c: Max value for pi_c (only used in batch)           [  -  ]
+        
+        Returns: A dictionary containing the list of calculated outputs for each batch.
+            pi_c: Compressor total pressure ratio   
+            F_m0: Specific Thrust                   
+            f: Fuel Air ratio                       
+            S: Specific fuel consumption            
+            eta_T: Thermal efficiency               
+            eta_P: Propulsive efficiency            
+            eta_Total: Total efficiency
+            FR: Thrust ratio   
         """    
+        output = {
+            'F_m0': [],
+            'f': [],
+            'S': [],
+            'eta_T': [],
+            'eta_P': [],
+            'eta_Total': []
+        }
 
-        R = (gamma - 1)/gamma * cp
-        V0 = self.a0 * M0 
+        pi_c_increase = 1
 
-        tau_r = 1 + (gamma - 1)/2 * M0**2
+        if batch_size <= 0:
+            return output
+        elif batch_size == 1:
+            max_pi_c = pi_c  
+        else:
+            pi_c = min_pi_c
+            pi_c_increase = (max_pi_c - min_pi_c)/batch_size
 
-        tau_f = pi_f**((gamma - 1)/gamma)
-        V19_a0 = (2/(gamma - 1) * (tau_r * tau_f - 1))**(1/2)
+        while pi_c <= max_pi_c:
 
-        tau_c = pi_c**((gamma - 1)/gamma)
-        tau_lambda = Tt4/self.T0
+            R = (gamma - 1)/gamma * cp
+            V0 = self.a0 * M0 
 
-        f = cp * self.T0/hpr * (tau_lambda - tau_r * tau_c)
+            tau_r = 1 + (gamma - 1)/2 * M0**2
 
-        tau_t = 1 - tau_r/tau_lambda * (tau_c - 1)
-        V9_a0 = (2/(gamma - 1) * (tau_lambda - tau_r*(tau_c - 1 + alpha * (tau_f - 1)) - tau_lambda/(tau_r * tau_c)))**(1/2)
+            tau_f = pi_f**((gamma - 1)/gamma)
+            V19_a0 = (2/(gamma - 1) * (tau_r * tau_f - 1))**(1/2)
 
-        F_m0 = self.a0 * 1/(1 + alpha) * (V9_a0 - M0 + alpha * (V19_a0 - M0))
+            tau_c = pi_c**((gamma - 1)/gamma)
+            tau_lambda = Tt4/self.T0
 
-        f = cp * self.T0/hpr * (tau_lambda - tau_r * tau_c)
+            f = cp * self.T0/hpr * (tau_lambda - tau_r * tau_c)
 
-        S = f/((1 + alpha) * F_m0)
-        eta_T = 1 - 1/(tau_r * tau_c)
-        eta_P = 2 * M0 * (V9_a0 - M0 + alpha * (V19_a0 - M0))/((V9_a0 * self.a0)**2/(self.a0**2) - M0**2 + alpha * ((V19_a0*self.a0)**2/(a0**2) - M0**2))
-        eta_Total = eta_P * eta_T
-        FR = (V9_a0 - M0)/(V19_a0 - M0)
+            tau_t = 1 - tau_r/tau_lambda * (tau_c - 1)
+            V9_a0 = (2/(gamma - 1) * (tau_lambda - tau_r*(tau_c - 1 + alpha * (tau_f - 1)) - tau_lambda/(tau_r * tau_c)))**(1/2)
 
-        return (F_m0, f, S, eta_T, eta_P, eta_Total, FR)
+            F_m0 = self.a0 * 1/(1 + alpha) * (V9_a0 - M0 + alpha * (V19_a0 - M0))
+
+            f = cp * self.T0/hpr * (tau_lambda - tau_r * tau_c)
+
+            S = f/((1 + alpha) * F_m0)
+            eta_T = 1 - 1/(tau_r * tau_c)
+            eta_P = 2 * M0 * (V9_a0 - M0 + alpha * (V19_a0 - M0))/((V9_a0 * self.a0)**2/(self.a0**2) - M0**2 + alpha * ((V19_a0*self.a0)**2/(self.a0**2) - M0**2))
+            eta_Total = eta_P * eta_T
+            FR = (V9_a0 - M0)/(V19_a0 - M0)
+
+            output['pi_c'].append(pi_c)
+            output['F_m0'].append(F_m0)
+            output['f'].append(f)
+            output['S'].append(S)
+            output['eta_T'].append(eta_T)
+            output['eta_P'].append(eta_P)
+            output['eta_Total'].append(eta_Total)
+            output['F'].append(FR)
+
+            pi_c += pi_c_increase
+
+        return output
 
 
     def real_turbofan(self, 
@@ -240,7 +428,7 @@ class AircraftEngines:
         R_c = (gamma_c - 1)/gamma_c*cp_c #J/(kg.K)
         R_t = (gamma_t - 1)/gamma_t*cp_t #J/(kg.K)
 
-        a0 = (gamma_c*R_c*T0)**(1/2) #m/s
+        a0 = (gamma_c*R_c*self.T0)**(1/2) #m/s
         V0 = a0*M0 # m/s
 
         # Calculo dos parametros do escoamento livre
@@ -262,7 +450,7 @@ class AircraftEngines:
         eta_f = (pi_f**((gamma_c - 1)/gamma_c) - 1)/(tau_f - 1)
 
         # Relação de entalpia entre o queimador e o escoamento livre
-        tau_lambda = cp_t*Tt4/(cp_c*T0)
+        tau_lambda = cp_t*Tt4/(cp_c*self.T0)
 
         # Calculo de parametros do compressor
         tau_cL = pi_cL**((gamma_c - 1)/(gamma_c*e_cL))
@@ -272,8 +460,7 @@ class AircraftEngines:
         eta_cH = (pi_cH**((gamma_c - 1)/gamma_c) - 1)/(tau_cH - 1)
 
         # Calculo de parametros na turbina
-        f = (tau_lambda - tau_r*tau_d*tau_f*tau_cL*tau_cH)/(hpr*eta_b/(cp_c*T0) - tau_lambda) #kgFuel/kgAir
-        print("f = {}\n".format(f))
+        f = (tau_lambda - tau_r*tau_d*tau_f*tau_cL*tau_cH)/(hpr*eta_b/(cp_c*self.T0) - tau_lambda) #kgFuel/kgAir
 
         tau_tH = 1 - (tau_cH - 1)/(1 + f)/tau_lambda*tau_r*tau_d*tau_f*tau_cL*eta_mH
         tau_tL = 1 - ((alfa*(tau_f - 1) + (tau_cL - 1))*eta_mL/(1 + f)*tau_r*tau_d/tau_lambda/tau_tH)
@@ -326,10 +513,7 @@ class AircraftEngines:
         return (F_m0, f, S, eta_T, eta_P, eta_Total, FR)
 
 
-
-
     def real_turbofan_off_design(self, 
-        # Escolhas
         M0, 
         gamma_c, 
         gamma_t, 
@@ -352,7 +536,7 @@ class AircraftEngines:
         eta_mH,
         eta_tL,
 
-        # Referência
+        # On-design References
         M0_R,
         T0_R,
         P0_R,
@@ -371,7 +555,6 @@ class AircraftEngines:
         M9_R,
         M19_R,
         m0_R
-
         ):
 
         tau_cH_R = pi_cH_R**((gamma_c - 1)/(gamma_c))
@@ -380,7 +563,7 @@ class AircraftEngines:
         # Equações
         R_c = (gamma_c - 1)/gamma_c*cp_c #J/(kg.K)
         R_t = (gamma_t - 1)/gamma_t*cp_t #J/(kg.K)
-        a0 = (gamma_c*R_c*T0)**(1/2) #m/s
+        a0 = (gamma_c*R_c*self.T0)**(1/2) #m/s
         V0 = a0*M0 #m/s
         tau_r = 1 + (gamma_c - 1)/2*M0**2
         pi_r = tau_r**(gamma_c/(gamma_c - 1))
@@ -390,7 +573,7 @@ class AircraftEngines:
             eta_r = 1 - 0.075*(M0 - 1)**1.35
 
         pi_d = pi_d_max*eta_r
-        tau_lambda = cp_t*Tt4/(cp_c*T0)
+        tau_lambda = cp_t*Tt4/(cp_c*self.T0)
 
         teste = 10
         while teste > 0.0001:
@@ -399,7 +582,7 @@ class AircraftEngines:
             tau_cL = tau_cL_R
             pi_tL = pi_tL_R
             pi_cL = pi_cL_R
-            tau_cH = 1 + Tt4/T0/(Tt4_R/T0_R)*(tau_f_R*tau_cL_R)/(tau_r*tau_cL)*(tau_cH_R - 1)
+            tau_cH = 1 + Tt4/self.T0/(Tt4_R/T0_R)*(tau_f_R*tau_cL_R)/(tau_r*tau_cL)*(tau_cH_R - 1)
             pi_cH = (1 + eta_cH*(tau_cH - 1))**(gamma_c/(gamma_c - 1))
             pi_f = (1 + (tau_f - 1)*eta_f)**(gamma_c/(gamma_c - 1))
             Pt19_P0 = pi_r*pi_d*pi_f*pi_fn
@@ -431,8 +614,8 @@ class AircraftEngines:
             tau_cL_R = tau_cL
             pi_tL_R = pi_tL
 
-        m0 = m0_R*(1 + alfa)/(1 + alfa_R)*P0*pi_r*pi_d*pi_cL*pi_cH/(P0_R*pi_r_R*pi_d_R*pi_cL_R*pi_cH_R)*(Tt4_R/Tt4)**(1/2) #kg/s
-        f = (tau_lambda - tau_r*tau_cL*tau_cH)/(hpr*eta_b/(cp_c*T0) - tau_lambda) #kgFuel/kgAir
+        m0 = m0_R*(1 + alfa)/(1 + alfa_R)*self.P0*pi_r*pi_d*pi_cL*pi_cH/(P0_R*pi_r_R*pi_d_R*pi_cL_R*pi_cH_R)*(Tt4_R/Tt4)**(1/2) #kg/s
+        f = (tau_lambda - tau_r*tau_cL*tau_cH)/(hpr*eta_b/(cp_c*self.T0) - tau_lambda) #kgFuel/kgAir
         T9_T0 = tau_lambda*tau_tH*tau_tL/(Pt9_P9**((gamma_t - 1)/gamma_t))*cp_c/cp_t
         V9_a0 = M9*(gamma_t*R_t/(gamma_c*R_c)*T9_T0)**(1/2)
         T19_T0 = tau_r*tau_f/(Pt19_P19**((gamma_c - 1)/gamma_c))
@@ -444,8 +627,8 @@ class AircraftEngines:
         F_m0 = FF_m0  + FC_m0 #N/(kg/s)
         S = f/((1 + alfa)*F_m0) #(kgFuel/s)/N
         F = m0*F_m0 #N
-        N_NR_fan = (T0*tau_r/(T0_R*tau_r_R)*(pi_f**((gamma_c - 1)/gamma_c) - 1)/(pi_f_R**((gamma_c - 1)/gamma_c) - 1))**(1/2)
-        N_NR_H = (T0*tau_r*tau_cL/(T0_R*tau_r_R*tau_cL_R)*(pi_cH**((gamma_c - 1)/gamma_c) - 1)/(pi_cH_R**((gamma_c - 1)/gamma_c) - 1))**(1/2)
+        N_NR_fan = (self.T0*tau_r/(T0_R*tau_r_R)*(pi_f**((gamma_c - 1)/gamma_c) - 1)/(pi_f_R**((gamma_c - 1)/gamma_c) - 1))**(1/2)
+        N_NR_H = (self.T0*tau_r*tau_cL/(T0_R*tau_r_R*tau_cL_R)*(pi_cH**((gamma_c - 1)/gamma_c) - 1)/(pi_cH_R**((gamma_c - 1)/gamma_c) - 1))**(1/2)
         eta_T = a0**2*((1 + f)*V9_a0**2 + alfa*(V19_a0**2)- (1 + alfa)*M0**2)/(2*f*hpr)
         eta_P = 2*V0*(1 + alfa)*F_m0/(a0**2*((1 + f)*V9_a0**2 + alfa*V19_a0**2 - (1 + alfa)*M0**2))
         eta_Total = eta_P*eta_T
