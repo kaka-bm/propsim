@@ -26,7 +26,7 @@ This command will install the library and its dependencies.
 
 Once the library is properly installed, we have the following use cases:
 
-1. The first one consists of carrying out a single point analysis with fixed Mach Number and $\pi_c$ values, in this specific example a ideal turbofan type engine is used.
+1. The first one consists of carrying out a single point analysis with a fixed $\pi_c$ value. In this specific example an ideal turbofan type engine is shown.
 
     ```
     from propsim import AircraftEngines
@@ -52,7 +52,7 @@ Once the library is properly installed, we have the following use cases:
     ```
 
 
-2. The second one consists of carrying out a bach analysis were Mach Number and $\pi_c$ values vary and so the output data can be plotted for carrying out the appropriate analysis. In this specific example a ideal turbofan type engine is used.
+2. The second one consists of carrying out a bach analysis were $\pi_c$ values vary and so the output data can be plotted for carrying out the appropriate analysis. This feature is currently available only for the ideal turbofan, ideal turbojet and real turbojet. In this specific example an ideal turbofan type engine is also shown.
 
     ```
     from propsim import AircraftEngines
