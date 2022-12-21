@@ -10,7 +10,7 @@ Engine Model  | Functionality                                              | Imp
 ------------- | -------------                                              | -------------
 Turbojet      | Ideal<br />Non-ideal on design<br />Non-ideal off design   | `ideal_turbojet`<br />`real_turbojet`<br />`real_turbojet_off_design` 
 Turbofan      | Ideal<br />Non-ideal on design<br />Non-ideal off design   | `ideal_turbofan`<br />`real_turbofan`<br />`real_turbofan_off_design` 
-Turboprop     | Non-ideal on design<br />Non-ideal off design              | `ideal_turboprop`<br />`real_turboprop`
+Turboprop     | Ideal<br />Non-ideal on design                             | `ideal_turboprop`<br />`real_turboprop`
 Ramjet        | Ideal                                                      | `ideal_ramjet`
 
 ##  Setup process
