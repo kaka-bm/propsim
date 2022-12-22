@@ -766,11 +766,167 @@ class AircraftEngines:
 
         return output
 
-def main():
-    engines = AircraftEngines(12500)
+    def ideal_turboprop(self, M0, gamma, cp, hpr, Tt4, pi_c, tau_t, eta_prop, batch_size=1, min_pi_c=0.001, max_pi_c=40):
 
-    out = engines.ideal_turbofan(M0=0.7, gamma=1.4, cp=1004, hpr=42.8*10**6, Tt4=1850, pi_c=10, pi_f=2, alpha=5, batch_size=3, min_pi_c=7, max_pi_c=15)
+        output = {
+        'pi_c': [],
+        'F_m0': [],
+        'f': [],
+        'S': [],
+        'eta_T': [],
+        'eta_P': [],
+        'eta_Total': [],
+        'C_c': [],
+        'C_prop': [],
+        'C_Total': []
+        }
+        
+        if batch_size <= 0:
+            return output
+        elif batch_size == 1:
+            max_pi_c = pi_c  
+        else:
+            pi_c = min_pi_c
+            pi_c_increase = (max_pi_c - min_pi_c)/batch_size
 
-    print(out)
+        while pi_c <= max_pi_c:
+        
+            R = (gamma - 1)/gamma*cp 
+            a0 = (gamma*R*self.T0)**(1/2) 
+            V0 = a0*M0 #m/s
+            tau_r = 1 + (gamma - 1)/2*M0**2
+            pi_r = tau_r**(gamma/(gamma - 1))
+            tau_lambda = Tt4/self.T0
+            tau_c = pi_c**((gamma - 1)/(gamma))
+            f = cp*self.T0*(tau_lambda - tau_r*tau_c)/hpr 
+            tau_tH = 1 - tau_r/tau_lambda*(tau_c - 1)
+            pi_tH = tau_tH**(gamma/(gamma - 1))
+            tau_tL = tau_t/tau_tH
+            V9_a0 = np.sqrt(2/(gamma - 1)*(tau_lambda*tau_t - tau_lambda/(tau_r*tau_c)))
+            C_c = (gamma - 1)*M0*(V9_a0 - M0)
+            C_prop = eta_prop*tau_lambda*tau_tH*(1 - tau_tL)
+            C_Total = C_prop + C_c
+            F_m0 = C_Total*cp*self.T0/(M0*a0)
+            S = f/F_m0 
+            S_P = f/(C_Total*cp*self.T0) 
+            eta_T = 1 - 1/(tau_lambda*tau_c)
+            eta_Total = C_Total/(tau_lambda - tau_r*tau_c)
+            eta_P = eta_Total/eta_T
+            AF = 1/f
+            
+            if math.isnan(F_m0) or math.isnan(S) or math.isnan(f) or math.isnan(eta_P) or math.isnan(eta_T) or math.isnan(eta_Total) or math.isnan(C_c) or math.isnan(C_prop) or math.isnan(C_Total):
+                pi_c += pi_c_increase
+                continue
 
-if __name__ == '__main__': main()
+            output['pi_c'].append(pi_c)
+            output['F_m0'].append(F_m0)
+            output['f'].append(f)
+            output['S'].append(S)
+            output['eta_T'].append(eta_T)
+            output['eta_P'].append(eta_P)
+            output['eta_Total'].append(eta_Total)
+            output['C_c'].append(C_c)
+            output['C_prop'].append(C_prop)
+            output['C_Total'].append(C_Total)
+
+            pi_c += pi_c_increase
+
+        return output
+    
+    def real_turboprop(self, M0, T0, gamma_c, gamma_t, cp_c, cp_t, hpr, pi_d_max, pi_b, pi_n, e_c, e_tL, e_tH, eta_b, eta_g, eta_mL, eta_mH, eta_prop, Tt4, pi_c, tau_t, batch_size=1, min_pi_c=0.001, max_pi_c=40):
+   
+        output = {
+        'pi_c': [],
+        'F_m0': [],
+        'f': [],
+        'S': [],
+        'eta_T': [],
+        'eta_P': [],
+        'eta_Total': [],
+        'C_c': [],
+        'C_prop': [],
+        'C_Total': [],
+        'W_m0': [],
+        'S_P': []
+        }
+        
+        if batch_size <= 0:
+            return output
+        elif batch_size == 1:
+            max_pi_c = pi_c  
+        else:
+            pi_c = min_pi_c
+            pi_c_increase = (max_pi_c - min_pi_c)/batch_size
+
+        while pi_c <= max_pi_c:
+        
+            R_c = (gamma_c - 1)/gamma_c*cp_c 
+            R_t = (gamma_t - 1)/gamma_t*cp_t 
+            a0 = (gamma_c*R_c*self.T0)**(1/2) 
+            V0 = a0*M0 
+            tau_r = 1 + (gamma_c - 1)/2*M0**2
+            pi_r = tau_r**(gamma_c/(gamma_c - 1))
+            if M0 <= 1:
+                eta_r = 1
+            else:
+                eta_r = 1 - 0.075*(M0 - 1)**1.35
+            pi_d = pi_d_max*eta_r
+            tau_lambda = cp_t*Tt4/(cp_c*self.T0)
+            tau_c = pi_c**((gamma_c - 1)/(gamma_c*e_c))
+            eta_c = (pi_c**((gamma_c - 1)/gamma_c) - 1)/(tau_c - 1)
+            f = (tau_lambda - tau_r*tau_c)/(hpr*eta_b/(cp_c*self.T0) - tau_lambda) 
+            tau_tH = 1 - tau_r*(tau_c - 1)/(eta_mH*(1 + f)*tau_lambda)
+            pi_tH = tau_tH**(gamma_t/((gamma_t - 1)*e_tH))
+            eta_tH = (1 - tau_tH)/(1 - tau_tH**(1/e_tH))
+
+            tau_tL = tau_t/tau_tH
+            C_prop = eta_prop*eta_g*eta_mL*(1 + f)*tau_lambda*tau_tH*(1 - tau_tL)
+
+            pi_tL = tau_tL**(gamma_t/((gamma_t - 1)*e_tL))
+            eta_tL = (1 - tau_tL)/(1 - tau_tL**(1/e_tL))
+            Pt9_P0 = pi_r*pi_d*pi_c*pi_b*pi_tH*pi_tL*pi_n
+            if Pt9_P0 > ((gamma_t + 1)/2)**(gamma_t/(gamma_t - 1)):
+                M9 = 1
+                Pt9_P9 = ((gamma_t + 1)/2)**(gamma_t/(gamma_t - 1))
+                P0_P9 = Pt9_P9/Pt9_P0
+            else:
+                P0_P9 = 1
+                Pt9_P9 = Pt9_P0
+                M9 = (2/(gamma_t - 1)*(Pt9_P0**((gamma_t - 1)/gamma_t) - 1))**(1/2)
+            V9_a0 = math.sqrt(2*tau_lambda*tau_tH*tau_tL/(gamma_c - 1)*(1 - (Pt9_P9)**(-1*(gamma_t - 1)/gamma_t)))
+            Tt9_T0 = tau_lambda*tau_tH*tau_tL
+            T9_T0 = Tt9_T0/(Pt9_P9**((gamma_t - 1)/gamma_t))
+            C_c = (gamma_c - 1)*M0*((1 + f)*V9_a0 - M0 + (1 + f)*R_t/R_c*T9_T0/V9_a0*(1 - P0_P9)/gamma_c)
+            C_Total = C_prop + C_c
+            F_m0 = C_Total*cp_c*self.T0/V0
+            S = f/F_m0 
+            S_P = f/(C_Total*cp_c*self.T0) 
+
+
+            W_m0 = C_Total*cp_c*self.T0 
+
+            eta_P = C_Total/(C_prop/eta_prop + ((gamma_c - 1)/2)*((1 + f)*V9_a0**2 - M0**2))
+            eta_T = C_Total*cp_c*self.T0/(f*hpr)
+            eta_Total = eta_P*eta_T
+            AF = 1/f
+        
+            if math.isnan(F_m0) or math.isnan(S) or math.isnan(f) or math.isnan(eta_P) or math.isnan(eta_T) or math.isnan(eta_Total) or math.isnan(C_c) or math.isnan(C_prop) or math.isnan(C_Total) or math.isnan(W_m0) or math.isnan(S_P):
+                pi_c += pi_c_increase
+                continue
+            
+            output['pi_c'].append(pi_c)
+            output['F_m0'].append(F_m0)
+            output['f'].append(f)
+            output['S'].append(S)
+            output['eta_T'].append(eta_T)
+            output['eta_P'].append(eta_P)
+            output['eta_Total'].append(eta_Total)
+            output['C_c'].append(C_c)
+            output['C_prop'].append(C_prop)
+            output['C_Total'].append(C_Total)
+            output['W_m0'].append(W_m0)
+            output['S_P'].append(S_P)
+        
+            pi_c += pi_c_increase
+        
+        return output

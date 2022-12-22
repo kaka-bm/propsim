@@ -5,7 +5,7 @@ long_description = (this_directory / "README.md").read_text()
 
 setup(
     name='propsim',
-    version='0.0.4',
+    version='0.0.5',
     description='A simple and intuitive tool for simulating different types of aircraft engines.',
     long_description=long_description,
     long_description_content_type='text/markdown',
