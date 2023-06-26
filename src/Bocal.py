@@ -10,8 +10,8 @@ def supersonic_inlet(M0,gamma):
             Returns: A dictionary containing the list of calculated outputs for each batch.
                 A0_At: capture/throat area ratio
                 Pty_PTx: pressure for the condition before the shock/pressure for Temperature after shock
-                Ac_At:
-                Pty_Pt0:
+                Ac_At: area at the throat (Ac) to the cross-sectional area at the nozzle exit (At) 
+                Pty_Pt0: ratio of total pressure at the exit after the shock(Pty) to total pressure at the inlet (Pt0)
 
             """
 
