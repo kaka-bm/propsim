@@ -13,6 +13,14 @@ Turbofan      | Ideal<br />Non-ideal on design<br />Non-ideal off design   | `id
 Turboprop     | Ideal<br />Non-ideal on design                             | `ideal_turboprop`<br />`real_turboprop`
 Ramjet        | Ideal                                                      | `ideal_ramjet`
 
+Besides, through a core `AircraftEnginesNozzles` class,  the user is able to switch between the following Nozzle types according to the flight regime. This makes it possible to find the nozzle dimensions that lead to a higher exhaust velocity and higher thrust:
+
+Nozzle Model   | Functionality                          
+-------------- | ----------------------------
+Subsonic Convergent Nozzle | ...
+Supersonic Divergent Nozzle | ...
+Convergent-Divergent Nozzle | ....
+
 ##  Setup process
 
 First, one must install the library using the following command in an environment containing Python 3.6 or higher.
