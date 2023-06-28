@@ -15,11 +15,11 @@ Ramjet        | Ideal                                                      | `id
 
 Besides, through a core `AircraftEnginesNozzles` class,  the user is able to switch between the following Nozzle types according to the flight regime. This makes it possible to find the nozzle dimensions that lead to a higher exhaust velocity and higher thrust:
 
-Nozzle Model   | Functionality                          
--------------- | ----------------------------
-Subsonic Convergent Nozzle | ...
-Supersonic Divergent Nozzle | ...
-Convergent-Divergent Nozzle | ....
+Nozzle Model   | Functionality                | Implemented function           
+-------------- | ---------------------------- |----------------
+Subsonic Convergent Nozzle | Subsonic Mach    | `Subsonic_inlet`
+Supersonic Divergent Nozzle | Supersonic Mach | `supersonic_inlet`
+Convergent-Divergent Nozzle | ....            | `convergent_divergent_nozzle_design`    
 
 ##  Setup process
 
