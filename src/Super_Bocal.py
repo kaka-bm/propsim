@@ -49,7 +49,7 @@ def supersonic_inlet(M0,gamma):
     phoVy_phoV0 = Pty_Pt0
     phoy_pho0 = Pty_Pt0
 
-    # Eq 3.15 são três igualdades > ver exatamente como vai ser usado
+    # Eq 3.15 são três igualdades 
     Astarx_Astary = Pty_Ptx
     phox_phoy = Pty_Ptx
 
