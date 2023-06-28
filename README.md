@@ -19,7 +19,7 @@ Nozzle Model   | Functionality                | Implemented function
 -------------- | ---------------------------- |----------------
 Subsonic Convergent Nozzle | Subsonic Mach    | `Subsonic_inlet`
 Supersonic Divergent Nozzle | Supersonic Mach | `supersonic_inlet`
-Convergent-Divergent Nozzle | ....            | `convergent_divergent_nozzle_design`    
+Convergent-Divergent Nozzle | General          | `convergent_divergent_nozzle_design`    
 
 ##  Setup process
 
