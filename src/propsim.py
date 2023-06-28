@@ -1,6 +1,8 @@
 from ambiance import Atmosphere
 import math
-
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 class AircraftEngines:
 
@@ -930,3 +932,211 @@ class AircraftEngines:
             pi_c += pi_c_increase
         
         return output
+
+
+class EnginesNozzles:
+
+    def __init__(self, height):
+        self.atm = Atmosphere(height)
+        self.T0 = self.atm.temperature[0]
+        self.P0 = self.atm.pressure[0]
+        self.a0 = self.atm.speed_of_sound[0]
+        
+    def subsonic_convergent_inlet_design(self,mdot0,gamma,Me,Ms,R,T,M0=0.8):
+        if gamma == 1.3:
+            MFP = 0.03254898 * M0**3 - 0.1088489 * M0**2 + -0.30371691 * M0 + 1.16783628
+        elif gamma == 1.4:
+            MFP = 0.1983 * M0**3 - 1.0612 * M0**2 + 1.5190 * M0 + 0.0183
+        else:
+            MFP = 0.03254898 * M0**3 - 0.1088489 * M0**2 + -0.30371691 * M0 + 1.16783628
+
+        MFP_at_M_08 = MFP
+
+
+
+        # Eq 3.3
+        Dt = math.sqrt((4 / math.pi) * ((mdot0 * math.sqrt(self.T0)) / self.P0) * (1 / MFP_at_M_08))
+
+        # Eq 3.1
+        At = math.pi * (Dt ** 2) / 4
+
+        # Eq 3.4
+        # Informações que estão no artigo
+        Tref = 288.2  # K
+        Pref = 101.3  # kPa
+
+        mdotc0 = mdot0 * math.sqrt(self.T0 / Tref) / (self.P0 / Pref)
+
+        # Eq 3.5
+        Dt = 0.07413 * math.sqrt(mdotc0)
+
+        # Eq 3.6
+        Ve = Me
+
+        # Eq 3.7
+        Vs = Ms * self.a0
+
+        # Eq 3.8
+        atmm = self.atm
+        As = Ms / (Vs*1.225)
+
+        # Eq 3.9
+        rho = (self.P0 * M0) / (R * T)
+
+        # Eq 3.10
+        theta = math.asin((Vs - Ve) / Ve)
+
+
+        return Dt,mdotc0,As,rho,theta
+
+
+    def supersonic_convergent_inlet_design(M0,gamma):
+        """
+                Description: This method calculates the on design parameters of a supersonic inlet.
+
+                Arguments:
+                    M0: Mach number
+                    gamma: Ratio of specific heats
+
+
+                Returns: A dictionary containing the list of calculated outputs for each batch.
+                    A0_At: capture/throat area ratio
+                    Pty_PTx: pressure for the condition before the shock/pressure for Temperature after shock
+                    Ac_At: area at the throat (Ac) to the cross-sectional area at the nozzle exit (At) 
+                    Pty_Pt0: ratio of total pressure at the exit after the shock(Pty) to total pressure at the inlet (Pt0)
+
+                """
+
+
+
+        # Eq 3.11 para condição de M0
+
+        ## A0_At = ((A / Astar) * (Pty / P0)) não precisa, fiz uma função
+
+        # Função feita a partir do gráfico 10.23 do livro Elements of Propulsion
+        def fun_A0_At(M):
+            A0_At = -0.02720395692489004 * M **2 + 0.30287933903754993 * M + 0.7201226260439323
+            return A0_At
+
+        A0_At = fun_A0_At(M0) # Resultado da eq.11
+
+        # Eq 3.12 para condição de M0
+
+        # # Função feita a partir do gráfico 10.17 do livro Elements of Propulsion
+        def fun_Pty_Ptx(M):
+            Pty_Ptx = 0.937222346061776 + 0.41669957451880146 * M - 0.37653137074222387 * M ** 2 + 0.055265789273162676 * M ** 3
+            return Pty_Ptx
+
+        Pty_Ptx = fun_Pty_Ptx(M0)
+
+        # Eq 3.13
+        A_Astar = (1 / M0) * ((2 / (gamma + 1)) * (1 + ((gamma - 1) / 2) * M0 ** 2)) ** ((gamma + 1) / (2 * (gamma - 1)))
+
+        # Eq 3.12 para condição de M0
+        Ac_At = A0_At * ((A_Astar) * (Pty_Ptx))
+
+        # Eq 3.14
+        Pty_Pt0 = A0_At*(A_Astar)**-1
+        Astar0_Astary = Pty_Pt0
+        phoVy_phoV0 = Pty_Pt0
+        phoy_pho0 = Pty_Pt0
+
+        # Eq 3.15 são três igualdades > ver exatamente como vai ser usado
+        Astarx_Astary = Pty_Ptx
+        phox_phoy = Pty_Ptx
+
+        return(A0_At,A_Astar,Pty_Ptx,Ac_At,Pty_Pt0)
+    
+
+    def convergent_divergent_nozzle_design(mdot8, Pt8, Tt8, Pt9_Pt8, gamma, CD, is_supersonic, P0):
+        output = {
+        'A9_A8': [],
+        'V9i': [],
+        'V9': [],
+        'CV': [],
+        'Cfg': [],
+        'Fg': []
+        }
+        R = 1716
+        MFP=0.5224
+        
+        areas = [1, 1.25 , 1.5, 1.75, 2, 2.23, 2.5, 2.78, 3, 3.3, 3.5, 3.74, 4, 4.5, 5, 6, 7, 8, 9, 10 ]
+        machs = [1, 1.59, 1.83, 2, 2.16, 2.26, 2.38, 2.48, 2.56, 2.62, 2.7, 2.76, 2.84, 2.94, 3.04, 3.22, 3.36, 3.48, 3.6, 3.7]
+        pressoes = [0.54, 0.25, 0.169, 1.29, 0.1, 0.085, 0.069, 0.059, 0.052, 0.047, 0.041, 0.037, 0.033, 0.028, 0.023,
+                    0.017, 0.014, 0.011, 0.0099, 0.0085 ]
+        for i in range(len(areas)):
+            A9_A8 = areas[i]      
+            
+            Pt9 = Pt9_Pt8*Pt8
+
+            ## Eq 1
+            A8e = (mdot8*math.sqrt(Tt8))/(Pt8*MFP)
+            A8 = CD*A8e
+            A9 = A8*A9_A8
+
+            ## 2
+            A_A_star_9i = (1/CD)*A9_A8
+
+            ## 4
+            P9i_Pt9 = (1 + ((gamma - 1) / 2) * machs[i]**2)**-(gamma/(gamma-1)) - 0.0052
+            #P9i_Pt9 = pressoes[i] - 0.0052
+
+            ## 5
+            P9i = P9i_Pt9*Pt8
+            ## 6
+            V9i = math.sqrt(R * Tt8) * math.sqrt(abs((2 * gamma / (gamma - 1)) * (1 - (P9i / Pt8)**((gamma - 1) / gamma))))
+            ## 7
+            A_Astar_9 = (Pt9 / Pt8) * (A9_A8) * (1 / CD)
+            A_Astar_9 = areas[i]
+
+            ## 8
+            M92 = ( (A_Astar_9)**( 2*(gamma-1)/(gamma+1) )*( (2/(gamma+1))**-1 ) - 1 ) / ( (gamma-1)/2  )
+            M9 = math.sqrt(M92)  
+            M9 = machs[i]
+
+            ## 9
+            P9_Pt9 =  (1 + ((gamma - 1) / 2) * M9**2)**-(gamma/(gamma-1))
+            P9_Pt9 = (1 + ((gamma - 1) / 2) * machs[i]**2)**-(gamma/(gamma-1)) #pressoes[i]
+
+            ##10
+            P9 = P9_Pt9 * Pt8
+            ##11                                                                     
+            V9 = math.sqrt(R * Tt8) * math.sqrt((2 * gamma / (gamma - 1)) * (1 - (P9 / Pt8)**((gamma - 1) / gamma)))
+            ##12
+            CV = V9 / V9i
+            ##13                                                                     
+            Cfg = CD * CV * math.sqrt((1 - (P9i / Pt8)**((gamma - 1) / gamma)) / (1 - (P0 / Pt8)**((gamma - 1) / gamma))) * (1 + ((gamma - 1) / (2 * gamma)) * ((1 - (P0 / P9)) / ((Pt9 / P9)**((gamma - 1) / gamma) - 1)))
+            ##14
+            Fg = mdot8*V9/32.174 + (P9-P0)*A9
+
+            output['V9i'].append(V9i)
+            
+            output['A9_A8'].append(A9_A8)
+            output['V9'].append(V9)
+            output['CV'].append(CV)
+            output['Cfg'].append(Cfg)
+            output['Fg'].append(Fg)
+            
+        df = pd.DataFrame(output)
+        sns.set_style("darkgrid")  # Define o fundo do gráfico com grid
+        
+        df_otimo = df[df.Fg == df['Fg'].max()]
+        print('Razão de área ótima para maior empuxo e respectivos valores de velocidade, CV, Cfg e Fg')
+        display(df_otimo)
+        #print('Valor ótimo da razão de área para maior empuxo: ')
+        
+        fig, axes = plt.subplots(1, 4, figsize=(20, 4))
+        sns.set_palette(palette = sns.dark_palette("navy", reverse=True))  # Define a paleta de cores como tons de azul
+        #plt.title("Gross Thrust, Velocity, CV and Cfg Vs Nozzle Area Ratio")  # Define o título do gráfic
+        sns.lineplot(ax=axes[0],data=df, x="A9_A8", y="Fg")
+        axes[0].set_title("Gross Thrust Vs Nozzle Area Ratio")
+        sns.lineplot(ax=axes[1],data=df, x="A9_A8", y="V9")
+        axes[1].set_title("Velocity Vs Nozzle Area Ratio") 
+        sns.lineplot(ax=axes[2],data=df, x="A9_A8", y="CV")
+        axes[2].set_title("CV Vs Nozzle Area Ratio") 
+        sns.lineplot(ax=axes[3],data=df, x="A9_A8", y="CV")
+        axes[3].set_title("Cfg Vs Nozzle Area Ratio") 
+        
+        print('Gráficos com variação dos valores em função da razão das áreas')
+        
+        plt.show()
