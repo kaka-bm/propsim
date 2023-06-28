@@ -5,8 +5,7 @@ import pandas as pd
 def obter_valores(A_Ast):
 
     # Especificar o caminho para o arquivo de texto
-    caminho_arquivo = "C:\\Users\\carlo\\OneDrive - Universidade Federal de Minas Gerais\\2023-1\\Propulsão 2\\artigo\\código\\versao5.csv"
-
+    caminho_arquivo = 'versao5.csv'
     # Importar o arquivo de texto como DataFrame usando o pandas
     df = pd.read_csv(caminho_arquivo,
                      delimiter=";")  # Dependendo do formato do arquivo, talvez seja necessário ajustar o delimitador
