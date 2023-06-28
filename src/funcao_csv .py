@@ -3,9 +3,9 @@ import pandas as pd
 
 # Definir função para obter valores correspondentes
 def obter_valores(A_Ast):
-    A_Ast = A_Ast * 100000
+
     # Especificar o caminho para o arquivo de texto
-    caminho_arquivo = "C:\\Users\\carlo\\OneDrive - Universidade Federal de Minas Gerais\\2023-1\\Propulsão 2\\artigo\\código\\versao4.csv"
+    caminho_arquivo = "C:\\Users\\carlo\\OneDrive - Universidade Federal de Minas Gerais\\2023-1\\Propulsão 2\\artigo\\código\\versao5.csv"
 
     # Importar o arquivo de texto como DataFrame usando o pandas
     df = pd.read_csv(caminho_arquivo,
@@ -43,7 +43,7 @@ def obter_valores(A_Ast):
 
 
 # Testando a função para valor de razão de área
-valor_A_Ast = 1.45947
+valor_A_Ast = 7.91567
 valores_M, valores_T_Tt, valores_P_Pt, valores_pho_phot, valores_A_Ast, valores_MFP = obter_valores(valor_A_Ast)
 
 # Exibir os valores correspondentes
