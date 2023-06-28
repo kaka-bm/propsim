@@ -1050,6 +1050,7 @@ class EnginesNozzles:
 
     def convergent_divergent_nozzle_design(mdot8, Pt8, Tt8, Pt9_Pt8, gamma, CD, is_supersonic, P0):
         output = {
+        'P9_Pt9': [],
         'A9_A8': [],
         'V9i': [],
         'V9': [],
@@ -1110,6 +1111,7 @@ class EnginesNozzles:
             Fg = mdot8*V9/32.174 + (P9-P0)*A9
 
             output['V9i'].append(V9i)
+            output['P9_Pt9'].append(P9_Pt9)
             
             output['A9_A8'].append(A9_A8)
             output['V9'].append(V9)
@@ -1134,9 +1136,10 @@ class EnginesNozzles:
         axes[1].set_title("Velocity Vs Nozzle Area Ratio") 
         sns.lineplot(ax=axes[2],data=df, x="A9_A8", y="CV")
         axes[2].set_title("CV Vs Nozzle Area Ratio") 
-        sns.lineplot(ax=axes[3],data=df, x="A9_A8", y="CV")
+        sns.lineplot(ax=axes[3],data=df, x="A9_A8", y="Cfg")
         axes[3].set_title("Cfg Vs Nozzle Area Ratio") 
         
         print('Gráficos com variação dos valores em função da razão das áreas')
         
         plt.show()
+        return()    
