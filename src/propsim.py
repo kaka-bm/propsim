@@ -992,7 +992,7 @@ class EnginesNozzles:
 
     def supersonic_convergent_inlet_design(M0,gamma):
         """
-                Description: This method calculates the on design parameters of a supersonic inlet.
+                Description: This method calculates the design parameters of a supersonic inlet.
 
                 Arguments:
                     M0: Mach number
@@ -1001,7 +1001,7 @@ class EnginesNozzles:
 
                 Returns: A dictionary containing the list of calculated outputs for each batch.
                     A0_At: capture/throat area ratio
-                    Pty_PTx: pressure for the condition before the shock/pressure for Temperature after shock
+                    Pty_PTx: pressure for the condition before the shock/pressure for Temperature aftershock
                     Ac_At: area at the throat (Ac) to the cross-sectional area at the nozzle exit (At) 
                     Pty_Pt0: ratio of total pressure at the exit after the shock(Pty) to total pressure at the inlet (Pt0)
 
@@ -1041,7 +1041,7 @@ class EnginesNozzles:
         phoVy_phoV0 = Pty_Pt0
         phoy_pho0 = Pty_Pt0
 
-        # Eq 3.15 são três igualdades > ver exatamente como vai ser usado
+        # Eq 3.15 são três igualdades
         Astarx_Astary = Pty_Ptx
         phox_phoy = Pty_Ptx
 
