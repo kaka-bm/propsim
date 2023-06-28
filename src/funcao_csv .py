@@ -18,7 +18,7 @@ def obter_valores(A_Ast):
         "col4": 'pho/phot',
         "col5": 'A/A*',
         "col6": "MFP",
-        # Adicione mais pares de colunas antigas e novas conforme necessário
+        
     }
     df = df.rename(columns=novos_nomes)
 
