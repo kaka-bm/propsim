@@ -298,9 +298,11 @@ class AircraftEngines:
         
         
 
-    def ideal_turbofan(self, M0, gamma, cp, hpr, Tt4, pi_c, pi_f, alpha, batch_size=1, min_pi_c=0.001, max_pi_c=40):
+    def ideal_turbofan(self, M0, gamma, cp, hpr, Tt4, pi_c, pi_f, alpha, plot=1, table=1, json=0, batch_size=1, min_pi_c=0.001, max_pi_c=40):
         """
         Description: This method calculates the on design parameters of an ideal turbofan engine.
+        We've insert plot, table and json options (set 0 or 1 to show). You can do the same in another 
+        functions.
 
         Arguments:
             M0: Mach number                                             [  -  ]
@@ -312,8 +314,12 @@ class AircraftEngines:
             batch_size: Number of points to iterate pi_c                [  -  ]
             min_pi_c: Min value for pi_c (only used in batch)           [  -  ]
             max_pi_c: Max value for pi_c (only used in batch)           [  -  ]
+            plot: binary flag (set 1 to show, else, 0)                  [  -  ]
+            table: binary flag (set 1 to show, else, 0)                 [  -  ]
+            json: binary flag (set 1 to show, else, 0)                  [  -  ]
         
-        Returns: A dictionary containing the list of calculated outputs for each batch.
+        Returns: A dictionary containing the list of calculated outputs for each batch if you set json = 1.
+        Also returns plots and/or a table if you set these parameters as 1.
             pi_c: Compressor total pressure ratio   
             F_m0: Specific Thrust                   
             f: Fuel Air ratio                       
@@ -334,6 +340,11 @@ class AircraftEngines:
             'FR': []
         }
 
+        if M0 <=0.1:
+            print('Atenção, o modelo possui limitações para esse valor de Mach')
+        if alpha < 1:
+            print('Atenção, o modelo possui limitações para essa razão de By-pass')
+            
         pi_c_increase = 1
 
         if batch_size <= 0:
@@ -387,7 +398,24 @@ class AircraftEngines:
 
             pi_c += pi_c_increase
 
-        return output
+        df = pd.DataFrame(output)
+        if plot == 1:
+            fig, axes = plt.subplots(1, 4, figsize=(25, 6))
+            sns.set_style("darkgrid")  # Define o fundo do gráfico com grid
+            sns.set_palette(palette = sns.dark_palette("navy", reverse=True))  # Define a paleta de cores como tons de azul
+            #plt.title("Gross Thrust, Velocity, CV and Cfg Vs Nozzle Area Ratio")  # Define o título do gráfic
+            sns.lineplot(ax=axes[0],data=df, x="pi_c", y="eta_P")
+            axes[0].set_title("Propulsive Efficiency Vs Compressor total pressure ratio")
+            sns.lineplot(ax=axes[1],data=df, x="pi_c", y="FR")
+            axes[1].set_title("Thrust ratio Vs Compressor total pressure ratio") 
+            sns.lineplot(ax=axes[2],data=df, x="pi_c", y="eta_T")
+            axes[2].set_title("Thermal efficiency Vs Compressor total pressure ratio") 
+            sns.lineplot(ax=axes[3],data=df, x="pi_c", y="S")
+            axes[3].set_title("Specific fuel consumption Vs Compressor total pressure ratio") 
+        if table == 1:
+            display(df)
+        if json == 1:
+            return output
 
 
     def real_turbofan(self, 
