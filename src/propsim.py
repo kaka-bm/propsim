@@ -1076,7 +1076,7 @@ class EnginesNozzles:
         return(A0_At,A_Astar,Pty_Ptx,Ac_At,Pty_Pt0)
     
 
-    def convergent_divergent_nozzle_design(mdot8, Pt8, Tt8, Pt9_Pt8, gamma, CD, is_supersonic, P0):
+    def convergent_divergent_nozzle_design(mdot8, Pt8, Tt8, Pt9_Pt8, gamma, CD, is_supersonic, P0, plot):
         output = {
         'P9_Pt9': [],
         'A9_A8': [],
@@ -1148,26 +1148,25 @@ class EnginesNozzles:
             output['Fg'].append(Fg)
             
         df = pd.DataFrame(output)
-        sns.set_style("darkgrid")  # Define o fundo do gráfico com grid
         
         df_otimo = df[df.Fg == df['Fg'].max()]
         print('Razão de área ótima para maior empuxo e respectivos valores de velocidade, CV, Cfg e Fg')
         display(df_otimo)
-        #print('Valor ótimo da razão de área para maior empuxo: ')
         
-        fig, axes = plt.subplots(1, 4, figsize=(20, 4))
-        sns.set_palette(palette = sns.dark_palette("navy", reverse=True))  # Define a paleta de cores como tons de azul
-        #plt.title("Gross Thrust, Velocity, CV and Cfg Vs Nozzle Area Ratio")  # Define o título do gráfic
-        sns.lineplot(ax=axes[0],data=df, x="A9_A8", y="Fg")
-        axes[0].set_title("Gross Thrust Vs Nozzle Area Ratio")
-        sns.lineplot(ax=axes[1],data=df, x="A9_A8", y="V9")
-        axes[1].set_title("Velocity Vs Nozzle Area Ratio") 
-        sns.lineplot(ax=axes[2],data=df, x="A9_A8", y="CV")
-        axes[2].set_title("CV Vs Nozzle Area Ratio") 
-        sns.lineplot(ax=axes[3],data=df, x="A9_A8", y="Cfg")
-        axes[3].set_title("Cfg Vs Nozzle Area Ratio") 
+        if plot == 1:
+            fig, axes = plt.subplots(1, 4, figsize=(20, 4))
+            sns.set_style("darkgrid")  
+            sns.set_palette(palette = sns.dark_palette("navy", reverse=True)) 
+            sns.lineplot(ax=axes[0],data=df, x="A9_A8", y="Fg")
+            axes[0].set_title("Gross Thrust Vs Nozzle Area Ratio")
+            sns.lineplot(ax=axes[1],data=df, x="A9_A8", y="V9")
+            axes[1].set_title("Velocity Vs Nozzle Area Ratio") 
+            sns.lineplot(ax=axes[2],data=df, x="A9_A8", y="CV")
+            axes[2].set_title("CV Vs Nozzle Area Ratio") 
+            sns.lineplot(ax=axes[3],data=df, x="A9_A8", y="Cfg")
+            axes[3].set_title("Cfg Vs Nozzle Area Ratio") 
+
+            print('Gráficos com variação dos valores em função da razão das áreas')
         
-        print('Gráficos com variação dos valores em função da razão das áreas')
-        
-        plt.show()
-        return()    
+            plt.show()
+        return()   
