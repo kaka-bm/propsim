@@ -1010,7 +1010,12 @@ class EnginesNozzles:
 
         # Eq 3.9
         rho = (self.P0 * M0) / (R * T)
-
+        
+        if -1 <= (Vs - Ve) / Ve <= 1:
+            theta = math.asin((Vs - Ve) / Ve)
+        else:
+            return "Erro. Os valores de Vs e Ve não são válidos para calcular theta."
+            
         # Eq 3.10
         theta = math.asin((Vs - Ve) / Ve)
 
