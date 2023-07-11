@@ -1024,7 +1024,7 @@ class EnginesNozzles:
         return Dt,mdotc0,As,rho,theta
 
 
-    def supersonic_convergent_inlet_design(M0,gamma):
+    def supersonic_convergent_inlet_design(self,M0,gamma):
         """
                 Description: This method calculates the design parameters of a supersonic inlet.
 
@@ -1043,9 +1043,9 @@ class EnginesNozzles:
 
 
 
-        # Eq 3.11 para condição de M0
-
-        ## A0_At = ((A / Astar) * (Pty / P0)) não precisa, fiz uma função
+        # Eq 3.11 para condição de M0 (não foi possível obter a equação diretamente sendo necessário uma função)
+        
+        ## A0_At = ((A / Astar) * (Pty / P0))  
 
         # Função feita a partir do gráfico 10.23 do livro Elements of Propulsion
         def fun_A0_At(M):
