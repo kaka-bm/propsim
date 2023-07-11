@@ -3,6 +3,7 @@ import math
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+from table import reproduzir_valores
 
 class AircraftEngines:
 
@@ -1023,7 +1024,7 @@ class EnginesNozzles:
         return Dt,mdotc0,As,rho,theta
 
 
-    def supersonic_convergent_inlet_design(self,M0,gamma):
+    def supersonic_convergent_inlet_design(M0,gamma):
         """
                 Description: This method calculates the design parameters of a supersonic inlet.
 
@@ -1042,9 +1043,9 @@ class EnginesNozzles:
 
 
 
-        # Eq 3.11 para condição de M0 (não foi possível obter a equação diretamente sendo necessário uma função)
-        
-        ## A0_At = ((A / Astar) * (Pty / P0))  
+        # Eq 3.11 para condição de M0
+
+        ## A0_At = ((A / Astar) * (Pty / P0)) não precisa, fiz uma função
 
         # Função feita a partir do gráfico 10.23 do livro Elements of Propulsion
         def fun_A0_At(M):
@@ -1080,8 +1081,123 @@ class EnginesNozzles:
 
         return(A0_At,A_Astar,Pty_Ptx,Ac_At,Pty_Pt0)
     
-
     def convergent_divergent_nozzle_design(mdot8, Pt8, Tt8, Pt9_Pt8, gamma, CD, is_supersonic, P0, plot):
+        """
+        Description: This method calculates the design parameters of a CD supersonic outlet nozzle.
+
+        Arguments:
+            mdot8: mass flow at throat
+            Pt8: stagnatin pressure at throat
+            Tt8: stagnation temperatre at throat
+            Pt9_Pt8: pressure ratio between outlet and throat 
+            gamma: ratio of specific heats
+            CD: discharge coefficient
+            P0: atmospheric pressure
+            plot: binary flag 1 to plot, otherwise, 0 
+
+
+        Returns: A table of single row containing the best area ratio (with gives higher F gross) and related CV, Fg, V9i, V9 for the inputs and plots of thesse varying with the area
+            V9: outlet velocity
+            V9i: isentropic outlet velocity
+            Cv: Velocity coefficient
+            Cfg: gross thrust coefficient
+            Fg: gross thrust
+
+        """
+        
+        output = {
+        'P9_Pt9': [],
+        'A9_A8': [],
+        'V9i': [],
+        'V9': [],
+        'CV': [],
+        'Cfg': [],
+        'Fg': []
+        }
+        R = 1716
+        
+        areas = [1, 1.25 , 1.5, 1.75, 2, 2.23, 2.5, 2.78, 3, 3.3, 3.5, 3.74, 4, 4.5, 5, 6, 7, 8, 9, 10 ]
+        for i in range(len(areas)):
+            A9_A8 = areas[i]  
+            MPF = getMFP(A9_A8)
+            
+            Pt9 = Pt9_Pt8*Pt8
+
+            ## Eq 1
+            A8e = (mdot8*math.sqrt(Tt8))/(Pt8*MFP)
+            A8 = CD*A8e
+            A9 = A8*A9_A8
+
+            ## 2
+            A_A_star_9i = (1/CD)*A9_A8
+
+            ## 4
+            M9i, P9i_Pt9 = reproduzir_valores(A_A_star_9i)
+            # Ref. eq: (1 + ((gamma - 1) / 2) * M**2)**-(gamma/(gamma-1))         
+
+            ## 5
+            P9i = P9i_Pt9*Pt8
+            ## 6
+            V9i = math.sqrt(R * Tt8) * math.sqrt(abs((2 * gamma / (gamma - 1)) * (1 - (P9i / Pt8)**((gamma - 1) / gamma))))
+            ## 7
+            A_Astar_9 = (Pt9 / Pt8) * (A9_A8) * (1 / CD)
+
+            ## 8
+            # Ref. Eq.
+            #M92 = ( (A_Astar_9)**( 2*(gamma-1)/(gamma+1) )*( (2/(gamma+1))**-1 ) - 1 ) / ( (gamma-1)/2  )
+            #M9 = math.sqrt(M92)  
+            
+            ## 9
+            #Ref. Equation
+            #P9_Pt9 =  (1 + ((gamma - 1) / 2) * M9**2)**-(gamma/(gamma-1))
+            M9, P9_Pt9 = reproduzir_valores(A_Astar_9)
+
+            ##10
+            P9 = P9_Pt9 * Pt8
+            ##11                                                                     
+            V9 = math.sqrt(R * Tt8) * math.sqrt((2 * gamma / (gamma - 1)) * (1 - (P9 / Pt8)**((gamma - 1) / gamma)))
+            ##12
+            CV = V9 / V9i
+            ##13                                                                     
+            Cfg = CD * CV * math.sqrt((1 - (P9i / Pt8)**((gamma - 1) / gamma)) / (1 - (P0 / Pt8)**((gamma - 1) / gamma))) * (1 + ((gamma - 1) / (2 * gamma)) * ((1 - (P0 / P9)) / ((Pt9 / P9)**((gamma - 1) / gamma) - 1)))
+            ##14
+            Fg = mdot8*V9/32.174 + (P9-P0)*A9
+
+            output['V9i'].append(V9i)
+            output['P9_Pt9'].append(P9_Pt9)
+            
+            output['A9_A8'].append(A9_A8)
+            output['V9'].append(V9)
+            output['CV'].append(CV)
+            output['Cfg'].append(Cfg)
+            output['Fg'].append(Fg)
+            
+        df = pd.DataFrame(output)
+        
+        df_otimo = df[df.Fg == df['Fg'].max()]
+        print('Razão de área ótima para maior empuxo e respectivos valores de velocidade, CV, Cfg e Fg')
+        display(df_otimo)
+        
+        if plot == 1:
+            fig, axes = plt.subplots(1, 4, figsize=(20, 4))
+            sns.set_style("darkgrid")  
+            sns.set_palette(palette = sns.dark_palette("navy", reverse=True)) 
+            sns.lineplot(ax=axes[0],data=df, x="A9_A8", y="Fg")
+            axes[0].set_title("Gross Thrust Vs Nozzle Area Ratio")
+            sns.lineplot(ax=axes[1],data=df, x="A9_A8", y="V9")
+            axes[1].set_title("Velocity Vs Nozzle Area Ratio") 
+            sns.lineplot(ax=axes[2],data=df, x="A9_A8", y="CV")
+            axes[2].set_title("CV Vs Nozzle Area Ratio") 
+            sns.lineplot(ax=axes[3],data=df, x="A9_A8", y="Cfg")
+            axes[3].set_title("Cfg Vs Nozzle Area Ratio") 
+
+            print('Gráficos com variação dos valores em função da razão das áreas')
+        
+            plt.show()
+        return()
+        
+        
+    def convergent_divergent_nozzle_designn(mdot8, Pt8, Tt8, Pt9_Pt8, gamma, CD, is_supersonic, P0, plot):
         output = {
         'P9_Pt9': [],
         'A9_A8': [],
