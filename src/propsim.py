@@ -1023,7 +1023,7 @@ class EnginesNozzles:
         return Dt,mdotc0,As,rho,theta
 
 
-    def supersonic_convergent_inlet_design(M0,gamma):
+    def supersonic_convergent_inlet_design(self,M0,gamma):
         """
                 Description: This method calculates the design parameters of a supersonic inlet.
 
